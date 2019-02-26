@@ -1,1 +1,6 @@
 # Defaults handlers for role bind
+- name: reload_named
+  service: 
+    name: named-chroot 
+    state: restarted
+

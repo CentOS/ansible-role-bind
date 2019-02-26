@@ -1,1 +1,26 @@
 # Defaults variables for role bind
+
+# Note: the zone files will be distributed from a place somewhere that ansible can reach and defined through the {{ filestore }} variable (path where to find the files)
+
+# Which are the zones for which we are authoritative as master or secondary (both can be empty - Default)
+# Example for primary/secondary zones : 
+# bind_primary_zones: 
+#   - name: myzone.com
+#     notify_list:      # Also used for the allow-transfer
+#       - 172.29.33.34
+#       - 192.168.2.2
+# bind_secondary_zones: 
+#   - name: otherzone.com
+#     transfer_from: 172.29.33.12
+
+bind_primary_zones: []
+bind_secondary_zones: []
+
+# Open iptables rules for tcp/udp 53 (public dns)
+bind_public: True
+
+# Zabbix/monitoring
+bind_zabbix_templates:
+  - Template CentOS DNS server
+bind_zabbix_groups:
+  - CentOS DNS servers (bind)

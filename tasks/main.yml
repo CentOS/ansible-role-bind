@@ -1,1 +1,84 @@
 # Defaults tasks for role bind
+# We'll default to bind-chroot for service
+
+- name: Ensuring we have Bind pkgs installed
+  yum:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - bind
+    - bind-chroot
+    - bind-utils
+
+- name: Configuring named.conf
+  template:
+    src: named.conf.j2
+    dest: /etc/named.conf
+    owner: root
+    group: named
+    mode: 0640
+  notify: reload_named
+
+- name: Distributing master zones for which we are authoritative
+  copy:
+    src: "{{ filestore }}/bind/{{ item.name }}"
+    dest: "/var/named/{{ item.name }}"
+    owner: root
+    group: named
+    mode: 0640
+  with_items: "{{ bind_primary_zones }}"
+  notify: reload_named
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensuring named is stopped and disabled (chroot is used instead)
+  service:
+    name: named
+    state: stopped
+    enabled: no
+
+- name: Ensuring named-chroot is started and enabled
+  service:
+    name: named-chroot
+    state: started
+    enabled: yes
+
+- name: Configuring iptables rules
+  include_role:
+    name: iptables
+    tasks_from: "{{ item }}"
+  vars:
+    iptables_policy_name: dns-tcp
+    iptables_protocol: tcp
+    iptables_port: "53"
+  with_items:
+    - custom-policy-ipv6
+    - custom-policy
+  when: bind_public
+
+- name: Configuring iptables rules
+  include_role:
+    name: iptables
+    tasks_from: "{{ item }}"
+  vars:
+    iptables_policy_name: dns-udp
+    iptables_protocol: udp
+    iptables_port: "53"
+  with_items:
+    - custom-policy-ipv6
+    - custom-policy
+  when: bind_public
+
+- name: Configuring agent in Zabbix server
+  include_role:
+    name: zabbix-server
+    tasks_from: agent_config
+  vars:
+    zabbix_templates: "{{ bind_zabbix_templates }}"
+    zabbix_groups: "{{ bind_zabbix_groups }}"
+  delegate_to: "{{ zabbix_api_srv }}"  
+  tags:
+    - monitoring
+  when: zabbix_api_srv is defined
+
+
