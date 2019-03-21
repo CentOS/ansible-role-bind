@@ -17,6 +17,7 @@
     owner: root
     group: named
     mode: 0640
+    validate: 'named-checkconf -q %s'
   notify: reload_named
 
 - name: Distributing master zones for which we are authoritative
@@ -26,6 +27,7 @@
     owner: root
     group: named
     mode: 0640
+    validate: 'named-checkzone -q {{ item.name }} %s'
   with_items: "{{ bind_primary_zones }}"
   notify: reload_named
   loop_control:
