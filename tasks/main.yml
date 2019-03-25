@@ -32,6 +32,8 @@
   notify: reload_named
   loop_control:
     label: "{{ item.name }}"
+  tags:
+    - zones
 
 - name: Ensuring named is stopped and disabled (chroot is used instead)
   service:
