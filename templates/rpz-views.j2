@@ -1,0 +1,16 @@
+; BIND zone file for rpz zone
+;
+$TTL    600
+@               SOA     localhost.        root.localhost. (
+                            2017100300      ; Serial
+                            86400           ; Refresh
+                            10800           ; Retry
+                            3600000         ; Expire
+                            600             ; Negative Cache TTL
+                    )
+            NS      localhost.
+{% if item.rpz_entries is defined %}
+{% for entry in item.rpz_entries %}
+{{ entry }}
+{% endfor %}
+{% endif %}

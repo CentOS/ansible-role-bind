@@ -17,7 +17,67 @@ bind_primary_zones: []
 bind_secondary_zones: []
 
 # Open iptables rules for tcp/udp 53 (public dns)
+# For Authoritative servers ! if we use allow_recursion, it will be blocked
 bind_public: True
+
+# Do we want to allow internal clients to use us as resolver ?
+# Please note that it would firewall port 53 for only those values
+bind_allow_recursion: False
+bind_recursion_acl_list:
+  - 192.168.122.0/24
+  - 127.0.0.1
+  - ::1
+
+# If used as caching/resolver, do we want forwarders ?
+bind_use_forwarders: False
+bind_forwarders_list:
+  - 9.9.9.9
+  - 8.8.8.8  
+
+# Do we want a response-policy-zone (RPZ)
+# And which A/AAAA records we want to override
+bind_use_rpz: False
+bind_rpz_records:
+  - mirror.centos.org A 192.168.1.1
+  - mirrorlist.centos.org A 192.168.1.2
+  
+# Do we want to use custom 'views' (https://bind9.readthedocs.io/en/latest/reference.html#view-statement-grammar)
+# IF set to True, it will have to come with a list and bind_primary_zones and secondary will be declared here (ignored elsewhere
+#
+bind_use_views: False
+bind_views:
+  - name: internal
+    clients: 
+      - 192.168.122.0/24
+    zones:
+      - name: domain.com
+        file: domain.com.internal
+        type: primary
+        notify_list:
+          - 192.168.1.1
+      - name: domain.org
+        type: slave
+        transfer_from: 192.168.1.2
+    rpz_entries:
+      - mirror.centos.org A 192.168.122.10
+  - name: internal2
+    clients: 
+      - 172.24.5.0/24
+    zones:
+      - name: domain.com
+        file: domain.com.internal2
+        type: primary
+        notify_list:
+          - 192.168.1.1
+      - name: 5.24.172.in-addr.arpa
+        file: 5.24.172.in-addr.arpa
+        type: primary
+        notify_list:
+          - 192.168.1.1
+     rpz_entries:
+       - mirror.centos.org A 172.24.5.1
+
+
 
 # Zabbix/monitoring
 bind_zabbix_templates:

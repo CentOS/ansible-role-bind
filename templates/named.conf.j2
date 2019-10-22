@@ -2,6 +2,14 @@
  This file is managed by Ansible. Don't edit
 */
 
+{% if bind_allow_recursion and bind_recursion_acl_list is defined %}
+acl "recursion_acl_list" {
+{% for acl in bind_recursion_acl_list %}
+  {{ acl }};
+{% endfor %}
+};
+{% endif %}
+
 options {
         listen-on port 53 { any; };
         listen-on-v6 port 53 { any; };
@@ -9,13 +17,35 @@ options {
         dump-file       "/var/named/data/cache_dump.db";
         statistics-file "/var/named/data/named_stats.txt";
         memstatistics-file "/var/named/data/named_mem_stats.txt";
+
+        {% if bind_allow_recursion -%}
+	recursion yes;
+	allow-recursion { recursion_acl_list; };
+	allow-query { recursion_acl_list; };
+	allow-query-cache { recursion_acl_list; };	
+	{% else -%}
+        recursion no;
         allow-query     { any; };
         allow-transfer     { "none"; };
-        recursion no;
+	{% endif %}
+
+	{% if bind_use_forwarders and bind_forwarders_list is defined -%}
+        forwarders {
+        {% for forwarder in bind_forwarders_list %}
+	{{ forwarder }};
+	{% endfor -%}
+	};
+	{% endif %}
 
         dnssec-enable yes;
         dnssec-validation yes;
-        dnssec-lookaside auto;
+        //dnssec-lookaside auto;
+
+	{% if bind_use_rpz %}
+	response-policy {
+          zone "rpz";
+        };
+	{% endif %}
 
         /* Path to ISC DLV key */
         bindkeys-file "/etc/named.iscdlv.key";
@@ -30,6 +60,9 @@ logging {
         };
 };
 
+{% if not bind_use_views %}
+# Not using "views" so default setup
+# Authoritative primary zones
 zone "." IN {
         type hint;
         file "named.ca";
@@ -38,8 +71,16 @@ zone "." IN {
 include "/etc/named.rfc1912.zones";
 include "/etc/named.root.key";
 
-# Authoritative primary zones
+{% if bind_use_rpz %}
+# Including RPZ zone in default non view mode
+zone "rpz" {
+      type master;
+      file "rpz";
+      allow-query { none; };
+};
+{% endif %}
 
+# Primary zones
 {% for zone in bind_primary_zones %}
 zone "{{ zone.name }}" {
       type master;
@@ -58,7 +99,6 @@ zone "{{ zone.name }}" {
 };
  
 {% endfor %}
-
 # Secondary zones
 {% for zone in bind_secondary_zones %}
  zone "{{ zone.name }}" {
@@ -70,3 +110,72 @@ zone "{{ zone.name }}" {
 };
       
 {% endfor %}
+# End of default block for non view - default - mode
+{% endif %}
+
+{% if bind_use_views %}
+# Using bind_views so switching to view mode
+{% for view in bind_views %}
+view "{{ view.name }}" {
+  match-clients { {% for client in view.clients %}{{ client }}; {% endfor %}} ;
+  {% if view.rpz_entries is defined %}
+  # Adding RPZ for view {{ view.name }}
+  response-policy { zone "rpz.{{ view.name }}"; } ;
+  zone "rpz.{{ view.name }}" {
+    type master;
+    file "rpz.{{ view.name }}";
+    allow-query { none; };
+  };
+  {% endif %}
+  # Adding default zones in each view
+  zone "." IN {
+        type hint;
+        file "named.ca";
+  };
+
+  include "/etc/named.rfc1912.zones";
+  include "/etc/named.root.key";
+
+  # Now zones for view {{ view.name }}
+  {% for zone in view.zones %}
+  zone "{{ zone.name }}" {
+  {% if zone.type == 'primary' %}
+    type master;
+    file "{{ zone.file }}";
+    notify yes;
+    allow-transfer {
+    {% for ip in zone.notify_list %}
+        {{ ip }} ;
+    {% endfor %}
+    }; 
+    also-notify {
+      {% for ip in zone.notify_list %}
+        {{ ip }} ;
+      {% endfor %}
+      };
+  {% else %}
+    type slave;
+    file "slaves/{{ zone.name }}";
+    masters {
+      {{ zone.transfer_from }};
+    };
+  {% endif %} 
+  };
+  {% endfor %}
+
+};
+{% endfor %}
+
+# we still need a default view to match "any"
+view "default" {
+  match-clients {any;} ; 
+  zone "." IN {
+        type hint;
+        file "named.ca";
+  };
+
+  include "/etc/named.rfc1912.zones";
+  include "/etc/named.root.key";
+};
+# End of views block from ansible
+{% endif %}

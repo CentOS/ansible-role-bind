@@ -10,6 +10,12 @@
     - bind-chroot
     - bind-utils
 
+- name: Ensuring named is stopped and disabled (chroot is used instead)
+  service:
+    name: named
+    state: stopped
+    enabled: no
+
 - name: Configuring named.conf
   template:
     src: named.conf.j2
@@ -17,29 +23,77 @@
     owner: root
     group: named
     mode: 0640
-    validate: 'named-checkconf -q %s'
+    validate: 'named-checkconf %s'
   notify: reload_named
+  tags:
+    - config
 
-- name: Distributing master zones for which we are authoritative
+- name: Default mode - Distributing master zones for which we are authoritative
   copy:
     src: "{{ filestore }}/bind/{{ item.name }}"
     dest: "/var/named/{{ item.name }}"
     owner: root
     group: named
     mode: 0640
-    validate: 'named-checkzone -q {{ item.name }} %s'
+    validate: 'named-checkzone {{ item.name }} %s'
   with_items: "{{ bind_primary_zones }}"
-  notify: reload_named
   loop_control:
     label: "{{ item.name }}"
+  notify: reload_named
+  when: not bind_use_views 
   tags:
     - zones
 
-- name: Ensuring named is stopped and disabled (chroot is used instead)
-  service:
-    name: named
-    state: stopped
-    enabled: no
+- name: Default mode - Distributing RPZ if needed
+  template:
+    src: "{{ item }}.j2"
+    dest: "/var/named/{{ item }}"
+    owner: root
+    group: named
+    mode: 0640
+    validate: 'named-checkzone {{ item }} %s'
+  with_items: 
+    - rpz
+  notify: reload_named
+  when: not bind_use_views 
+  tags:
+    - zones
+
+- name: View Mode - Distributing master zones for which we are authoritative
+  copy:
+    src: "{{ filestore }}/bind/{{ item.1.file }}"
+    dest: "/var/named/{{ item.1.file }}"
+    owner: root
+    group: named
+    mode: 0640
+    validate: 'named-checkzone {{ item.1.file }} %s'
+  with_subelements: 
+    - "{{ bind_views }}"
+    - zones
+  when: bind_use_views and item.1.type == 'primary'  
+  loop_control:
+    label: "{{ item.0.name }}"
+  notify: reload_named
+  tags:
+    - zones
+    - zones-view
+
+- name: View Mode - Distributing RPZ if needed
+  template:
+    src: "rpz-views.j2"
+    dest: "/var/named/rpz.{{ item.name }}"
+    owner: root
+    group: named
+    mode: 0640
+    validate: 'named-checkzone {{ item.name }} %s'
+  with_items: "{{ bind_views }}"
+  when: bind_use_views and item.rpz_entries is defined  
+  loop_control:
+    label: "{{ item.name }}"
+  notify: reload_named
+  tags:
+    - zones
+    - zones-view
 
 - name: Ensuring named-chroot is started and enabled
   service:
@@ -47,31 +101,9 @@
     state: started
     enabled: yes
 
-- name: Configuring iptables rules
-  include_role:
-    name: iptables
-    tasks_from: "{{ item }}"
-  vars:
-    iptables_policy_name: dns-tcp
-    iptables_protocol: tcp
-    iptables_port: "53"
-  with_items:
-    - custom-policy-ipv6
-    - custom-policy
-  when: bind_public
-
-- name: Configuring iptables rules
-  include_role:
-    name: iptables
-    tasks_from: "{{ item }}"
-  vars:
-    iptables_policy_name: dns-udp
-    iptables_protocol: udp
-    iptables_port: "53"
-  with_items:
-    - custom-policy-ipv6
-    - custom-policy
-  when: bind_public
+- include_tasks: iptables.yml
+  tags:
+    - iptables
 
 - name: Configuring agent in Zabbix server
   include_role:

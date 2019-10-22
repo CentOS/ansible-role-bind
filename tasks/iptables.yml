@@ -1,0 +1,57 @@
+- name: Configuring iptables tcp rules if public
+  include_role:
+    name: iptables
+    tasks_from: "{{ item }}"
+  vars:
+    iptables_policy_name: dns-tcp
+    iptables_protocol: tcp
+    iptables_port: "53"
+  with_items:
+    - custom-policy-ipv6
+    - custom-policy
+  when: bind_public and not bind_allow_recursion
+
+- name: Configuring iptables udp rules if public
+  include_role:
+    name: iptables
+    tasks_from: "{{ item }}"
+  vars:
+    iptables_policy_name: dns-udp
+    iptables_protocol: udp
+    iptables_port: "53"
+  with_items:
+    - custom-policy-ipv6
+    - custom-policy
+  when: bind_public and not bind_allow_recursion
+
+- name: IPv4 Ensuring we are not open for recursion
+  file:
+    path: "/etc/sysconfig/iptables.d/{{ item }}"
+    state: absent
+  with_items:
+    - 01-input-service-policy-dns-tcp
+    - 01-input-service-policy-dns-udp
+  when: bind_allow_recursion
+
+- name: IPv6 Ensuring we are not open for recursion
+  file:
+    path: "/etc/sysconfig/ip6tables.d/{{ item }}"
+    state: absent
+  with_items:
+    - 01-input-service-policy-dns-tcp
+    - 01-input-service-policy-dns-udp
+  when: bind_allow_recursion
+
+- name: IPv4 Firewall rules for recursion
+  template:
+    src: iptables-service-dns.j2
+    dest: /etc/sysconfig/iptables.d/01-input-service-policy-dns
+  notify:
+    - rebuild_iptables
+
+- name: IPv6 Firewall rules for recursion
+  template:
+    src: ip6tables-service-dns.j2
+    dest: /etc/sysconfig/ip6tables.d/01-input-service-policy-dns
+  notify:
+    - rebuild_ip6tables

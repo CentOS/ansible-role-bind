@@ -1,0 +1,7 @@
+# dns rules, using defined bind_recursion_acl_list
+{% if bind_allow_recursion %}
+{% for entry in bind_recursion_acl_list | ipv4 %}
+-A INPUT -m state --state NEW -m udp -p udp --dport 53 --source {{ entry }} -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 53 --source {{ entry }} -j ACCEPT
+{% endfor %}
+{% endif %}
