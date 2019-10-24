@@ -46,6 +46,7 @@
   template:
     src: iptables-service-dns.j2
     dest: /etc/sysconfig/iptables.d/01-input-service-policy-dns
+  when: bind_allow_recursion
   notify:
     - rebuild_iptables
 
@@ -53,5 +54,6 @@
   template:
     src: ip6tables-service-dns.j2
     dest: /etc/sysconfig/ip6tables.d/01-input-service-policy-dns
+  when: bind_allow_recursion
   notify:
     - rebuild_ip6tables
