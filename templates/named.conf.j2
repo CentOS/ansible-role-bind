@@ -10,6 +10,12 @@ acl "recursion_acl_list" {
 };
 {% endif %}
 
+include "/etc/named.rfc1912.zones";
+include "/etc/named.root.key";
+include "/etc/rndc.key";
+include "/etc/ddns.key";
+
+
 options {
         listen-on port 53 { any; };
         listen-on-v6 port 53 { any; };
@@ -68,9 +74,6 @@ zone "." IN {
         file "named.ca";
 };
 
-include "/etc/named.rfc1912.zones";
-include "/etc/named.root.key";
-
 {% if bind_use_rpz %}
 # Including RPZ zone in default non view mode
 zone "rpz" {
@@ -87,15 +90,18 @@ zone "{{ zone.name }}" {
       file "{{ zone.name }}";
       notify yes;
       allow-transfer {
-      {% for ip in zone.notify_list %}
+      {% for ip in zone.notify_list -%}
         {{ ip }} ;
-      {% endfor %}
+      {% endfor -%}
       };
       also-notify {
-      {% for ip in zone.notify_list %}
+      {% for ip in zone.notify_list -%}
         {{ ip }} ;
-      {% endfor %}
+      {% endfor -%}
       };
+      {% if zone.dynamic is defined and zone.dynamic -%}
+      allow-update { key ddns; };
+      {% endif -%}	
 };
  
 {% endfor %}
@@ -174,8 +180,6 @@ view "default" {
         file "named.ca";
   };
 
-  include "/etc/named.rfc1912.zones";
-  include "/etc/named.root.key";
 };
 # End of views block from ansible
 {% endif %}

@@ -3,12 +3,17 @@
 # Note: the zone files will be distributed from a place somewhere that ansible can reach and defined through the {{ filestore }} variable (path where to find the files)
 
 # Which are the zones for which we are authoritative as master or secondary (both can be empty - Default)
+# Note : we'll generate a ddns key and you can have primary zones "dynamic" if you set dynamic: True
 # Example for primary/secondary zones : 
 # bind_primary_zones: 
 #   - name: myzone.com
 #     notify_list:      # Also used for the allow-transfer
 #       - 172.29.33.34
 #       - 192.168.2.2
+#   - name: dynamic.com
+#     notify_list:
+#       - 172.22.1.1
+#     dynamic: True  
 # bind_secondary_zones: 
 #   - name: otherzone.com
 #     transfer_from: 172.29.33.12

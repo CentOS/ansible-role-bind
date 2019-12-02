@@ -1,0 +1,8 @@
+- name: Enabling selinux booleans
+  seboolean:
+    name: "{{ item }}"
+    persistent: yes
+    state: yes
+  with_items:
+    - named_write_master_zones
+  when: ansible_selinux.status == "enabled"

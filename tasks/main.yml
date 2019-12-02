@@ -16,6 +16,30 @@
     state: stopped
     enabled: no
 
+- name: Creating key for dynamic dns if we want to support it
+  command: rndc-confgen -a -A hmac-sha256 -b 512 -r /dev/urandom -k ddns -c ddns.key
+  args:
+    creates: /var/named/chroot/etc/ddns.key
+    chdir: /var/named/chroot/etc
+  tags:
+    - ddns
+
+- name: Ensuring correct owner/permissions on ddns key
+  file:
+    path: /var/named/chroot/etc/ddns.key
+    state: file
+    owner: root
+    group: named
+    mode: 0640
+  tags:
+    - ddns
+
+- name: symlink for ddns key
+  file:
+    state: link
+    src: /var/named/chroot/etc/ddns.key
+    dest: /etc/ddns.key
+
 - name: Configuring named.conf
   template:
     src: named.conf.j2
@@ -32,7 +56,7 @@
   copy:
     src: "{{ filestore }}/bind/{{ item.name }}"
     dest: "/var/named/{{ item.name }}"
-    owner: root
+    owner: named
     group: named
     mode: 0640
     validate: 'named-checkzone {{ item.name }} %s'
@@ -48,7 +72,7 @@
   template:
     src: "{{ item }}.j2"
     dest: "/var/named/{{ item }}"
-    owner: root
+    owner: named
     group: named
     mode: 0640
     validate: 'named-checkzone {{ item }} %s'
@@ -63,7 +87,7 @@
   copy:
     src: "{{ filestore }}/bind/{{ item.1.file }}"
     dest: "/var/named/{{ item.1.file }}"
-    owner: root
+    owner: named
     group: named
     mode: 0640
     validate: 'named-checkzone {{ item.1.file }} %s'
@@ -82,7 +106,7 @@
   template:
     src: "rpz-views.j2"
     dest: "/var/named/rpz.{{ item.name }}"
-    owner: root
+    owner: named
     group: named
     mode: 0640
     validate: 'named-checkzone {{ item.name }} %s'
@@ -104,6 +128,10 @@
 - include_tasks: iptables.yml
   tags:
     - iptables
+
+- include_tasks: selinux.yml
+  tags:
+    - selinux
 
 - name: Configuring agent in Zabbix server
   include_role:
