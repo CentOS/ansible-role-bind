@@ -3,12 +3,8 @@
 
 - name: Ensuring we have Bind pkgs installed
   yum:
-    name: "{{ item }}"
+    name: ['bind', 'bind-chroot', 'bind-utils']
     state: latest
-  with_items:
-    - bind
-    - bind-chroot
-    - bind-utils
 
 - name: Ensuring named is stopped and disabled (chroot is used instead)
   service:
