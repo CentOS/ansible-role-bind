@@ -4,6 +4,7 @@
 
 # Which are the zones for which we are authoritative as master or secondary (both can be empty - Default)
 # Note : we'll generate a ddns key and you can have primary zones "dynamic" if you set dynamic: True
+# For single master node (no AXFR/IXFR needed if for example same zone is distributed from ansible), you can just ignore notify_list
 # Example for primary/secondary zones : 
 # bind_primary_zones: 
 #   - name: myzone.com
@@ -14,6 +15,8 @@
 #     notify_list:
 #       - 172.22.1.1
 #     dynamic: True  
+#   - name: primary_only.com  # no secondary, or distributed directly through configmanagement/ansible and not relying on IXFR/AXFR
+#      
 # bind_secondary_zones: 
 #   - name: otherzone.com
 #     transfer_from: 172.29.33.12

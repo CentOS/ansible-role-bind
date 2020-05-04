@@ -13,28 +13,37 @@
     enabled: no
 
 - name: Creating key for dynamic dns if we want to support it
-  command: rndc-confgen -a -A hmac-sha256 -b 512 -r /dev/urandom -k ddns -c ddns.key
+  command: "rndc-confgen -a -A hmac-sha256 -b 512 -r /dev/urandom -k {{ item }} -c {{ item }}.key"
   args:
-    creates: /var/named/chroot/etc/ddns.key
+    creates: "/var/named/chroot/etc/{{ item }}.key"
     chdir: /var/named/chroot/etc
+  with_items:
+    - ddns
+    - rndc
   tags:
     - ddns
 
 - name: Ensuring correct owner/permissions on ddns key
   file:
-    path: /var/named/chroot/etc/ddns.key
+    path: "/var/named/chroot/etc/{{ item }}.key"
     state: file
     owner: root
     group: named
     mode: 0640
+  with_items:
+    - ddns
+    - rndc    
   tags:
     - ddns
 
 - name: symlink for ddns key
   file:
     state: link
-    src: /var/named/chroot/etc/ddns.key
-    dest: /etc/ddns.key
+    src: "/var/named/chroot/etc/{{ item }}.key"
+    dest: "/etc/{{ item }}.key"
+  with_items:
+    - ddns
+    - rndc
 
 - name: Configuring named.conf
   template:
