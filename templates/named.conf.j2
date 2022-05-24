@@ -118,6 +118,20 @@ zone "{{ zone.name }}" {
 };
       
 {% endfor %}
+
+# Forward zones
+{% for zone in bind_forward_zones %}
+ zone "{{ zone.name }}" {
+      type forward;
+      forwarders {
+      {% for ip in zone.forwarders -%}  
+        {{ ip }};
+      {% endfor -%}
+      };
+};
+      
+{% endfor %}
+
 # End of default block for non view - default - mode
 {% endif %}
 

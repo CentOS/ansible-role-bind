@@ -5,7 +5,7 @@
 # Which are the zones for which we are authoritative as master or secondary (both can be empty - Default)
 # Note : we'll generate a ddns key and you can have primary zones "dynamic" if you set dynamic: True
 # For single master node (no AXFR/IXFR needed if for example same zone is distributed from ansible), you can just ignore notify_list
-# Example for primary/secondary zones : 
+# Example for primary/secondary/forward zones : 
 # bind_primary_zones: 
 #   - name: myzone.com
 #     notify_list:      # Also used for the allow-transfer
@@ -20,9 +20,14 @@
 # bind_secondary_zones: 
 #   - name: otherzone.com
 #     transfer_from: 172.29.33.12
-
+# bind_forward_zones:
+#   - name: other.sub.zone.com
+#     forwarders:
+#       - 172.27.1.1 # where to forward queries specificall
+#       - 172.27.1.2
 bind_primary_zones: []
 bind_secondary_zones: []
+bind_forward_zones: []
 
 # Open iptables rules for tcp/udp 53 (public dns)
 # For Authoritative servers ! if we use allow_recursion, it will be blocked
