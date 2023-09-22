@@ -13,7 +13,7 @@
     enabled: no
 
 - name: Creating key for dynamic dns if we want to support it
-  command: "rndc-confgen -a -A hmac-sha256 -b 512 -r /dev/urandom -k {{ item }} -c {{ item }}.key"
+  command: "rndc-confgen -a -A hmac-sha256 -b 512 -k {{ item }} -c {{ item }}.key"
   args:
     creates: "/var/named/chroot/etc/{{ item }}.key"
     chdir: /var/named/chroot/etc
