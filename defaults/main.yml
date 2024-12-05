@@ -49,11 +49,13 @@ bind_forwarders_list:
 
 # Do we want a response-policy-zone (RPZ)
 # And which A/AAAA records we want to override
+# We can also return NXDOMAIN or deny resolving with CNAME for . or rpz-drop.
+# see https://www.ietf.org/archive/id/draft-ietf-dnsop-dns-rpz-00.txt
 bind_use_rpz: False
 bind_rpz_records:
   - mirror.centos.org A 192.168.1.1
   - mirrorlist.centos.org A 192.168.1.2
-  
+
 # Do we want to use custom 'views' (https://bind9.readthedocs.io/en/latest/reference.html#view-statement-grammar)
 # IF set to True, it will have to come with a list and bind_primary_zones and secondary will be declared here (ignored elsewhere
 #
