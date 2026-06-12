@@ -1,0 +1,8 @@
+# dns rules, defined by bind_recursion_acl_list
+{% if bind_allow_recursion %}
+{% for entry in bind_recursion_acl_list | ipv6 %}
+add rule inet filter INPUT ct state new ip6 saddr {{ entry }} tcp dport 53 counter accept
+add rule inet filter INPUT ct state new ip6 saddr {{ entry }} udp dport 53 counter accept
+{% endfor %}
+{% endif %}
+

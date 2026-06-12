@@ -42,18 +42,39 @@
     - 01-input-service-policy-dns-udp
   when: bind_allow_recursion
 
-- name: IPv4 Firewall rules for recursion
-  template:
-    src: iptables-service-dns.j2
-    dest: /etc/sysconfig/iptables.d/01-input-service-policy-dns
-  when: bind_allow_recursion
-  notify:
-    - rebuild_iptables
+- block:
+    - name: IPv4 Firewall rules for recursion
+      template:
+        src: iptables-service-dns.j2
+        dest: /etc/sysconfig/iptables.d/01-input-service-policy-dns
+      when: bind_allow_recursion
+      notify:
+        - rebuild_iptables
 
-- name: IPv6 Firewall rules for recursion
-  template:
-    src: ip6tables-service-dns.j2
-    dest: /etc/sysconfig/ip6tables.d/01-input-service-policy-dns
-  when: bind_allow_recursion
-  notify:
-    - rebuild_ip6tables
+    - name: IPv6 Firewall rules for recursion
+      template:
+        src: ip6tables-service-dns.j2
+        dest: /etc/sysconfig/ip6tables.d/01-input-service-policy-dns
+      when: bind_allow_recursion
+      notify:
+        - rebuild_ip6tables
+  when: ansible_distribution_major_version|int < 10
+
+- block:
+    - name: IPv4 nftables rules for recursion
+      template:
+        src: nftables-service-dns.j2
+        dest: /etc/sysconfig/nftables.d/01-input-service-policy-dns
+      when: bind_allow_recursion
+      notify:
+        - rebuild_nftables
+
+    - name: IPv6 nftables rules for recursion
+      template:
+        src: nftables-service-dns-ipv6.j2
+        dest: /etc/sysconfig/nftables.d/01-input-service-policy-dns-ipv6
+      when: bind_allow_recursion
+      notify:
+        - rebuild_nftables
+  when: ansible_distribution_major_version|int > 9
+      
